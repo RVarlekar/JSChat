@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/chat/:path*",
+      "destination": "https://spur-chat-backend-placeholder.onrender.com/chat/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://spur-chat-backend-placeholder.onrender.com/health"
+    }
+  ]
+}
