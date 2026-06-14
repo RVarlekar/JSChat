@@ -196,3 +196,20 @@ To run the automated tests against a running dev server:
 npm run test:backend
 ```
 
+---
+
+## 8. Demonstration Media & Verification
+
+Below is the visual proof of the fully automated dynamic FAQs, settings adjustment, rate-limiting, and chat UX flows.
+
+### End-to-End Chat UI Session Video
+This video demonstrates the dynamic suggestions rendering, click actions retrieving PostgreSQL-seeded policies context, and custom queries retrieving accurate support hours and payment details.
+
+![Chat UI Verification Flow](docs/chat_ui_flow.webp)
+
+### Completed Conversation Screenshot
+This screenshot shows the final state of the chat widget interface after multiple automated dynamic answers have been returned.
+
+![Completed Conversation](docs/completed_conversation.png)
+
+
