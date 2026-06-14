@@ -183,10 +183,10 @@ export async function generateReply(
         console.error("Gemini API error details:", errText);
         const status = response.status;
         if (status === 400 || status === 403) {
-          throw new LLMError('Invalid API key or configuration. Please check your Gemini setup.', 'auth');
+          throw new LLMError('Invalid API key or configuration. Please contact support.', 'auth');
         }
         if (status === 429) {
-          throw new LLMError('Gemini API limit reached. Please try again shortly.', 'rate_limit');
+          throw new LLMError('Our AI agent is very busy right now. Please try again shortly.', 'rate_limit');
         }
         throw new Error(`Gemini API error status: ${status}`);
       }
@@ -205,7 +205,7 @@ export async function generateReply(
       if (err instanceof Error && err.message.includes('timeout')) {
         throw new LLMError('The request timed out. Please try again.', 'timeout');
       }
-      throw new LLMError('Something went wrong calling the Gemini AI agent. Please try again.', 'unknown');
+      throw new LLMError('Something went wrong calling the AI agent. Please try again.', 'unknown');
     }
   }
 
