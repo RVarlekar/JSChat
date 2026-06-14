@@ -60,3 +60,55 @@ export async function getMessagesByConversation(
   );
   return rows;
 }
+
+// ─── Store Settings ──────────────────────────────────────────────────────────
+
+export interface StoreSettings {
+  agent_name: string;
+  agent_avatar: string;
+  agent_status: string;
+  store_policies: string;
+  suggestions: string[];
+}
+
+export async function getStoreSettings(): Promise<StoreSettings> {
+  const { rows } = await pool.query<any>(
+    `SELECT agent_name, agent_avatar, agent_status, store_policies, suggestions FROM store_settings WHERE id = 1`
+  );
+  return {
+    agent_name: rows[0].agent_name,
+    agent_avatar: rows[0].agent_avatar,
+    agent_status: rows[0].agent_status,
+    store_policies: rows[0].store_policies,
+    suggestions: Array.isArray(rows[0].suggestions) 
+      ? rows[0].suggestions 
+      : JSON.parse(rows[0].suggestions)
+  };
+}
+
+export async function updateStoreSettings(settings: Partial<StoreSettings>): Promise<StoreSettings> {
+  const current = await getStoreSettings();
+  const agentName = settings.agent_name ?? current.agent_name;
+  const agentAvatar = settings.agent_avatar ?? current.agent_avatar;
+  const agentStatus = settings.agent_status ?? current.agent_status;
+  const storePolicies = settings.store_policies ?? current.store_policies;
+  const suggestions = settings.suggestions ?? current.suggestions;
+
+  const { rows } = await pool.query<any>(
+    `UPDATE store_settings
+     SET agent_name = $1, agent_avatar = $2, agent_status = $3, store_policies = $4, suggestions = $5, updated_at = NOW()
+     WHERE id = 1
+     RETURNING agent_name, agent_avatar, agent_status, store_policies, suggestions`,
+    [agentName, agentAvatar, agentStatus, storePolicies, JSON.stringify(suggestions)]
+  );
+
+  return {
+    agent_name: rows[0].agent_name,
+    agent_avatar: rows[0].agent_avatar,
+    agent_status: rows[0].agent_status,
+    store_policies: rows[0].store_policies,
+    suggestions: Array.isArray(rows[0].suggestions) 
+      ? rows[0].suggestions 
+      : JSON.parse(rows[0].suggestions)
+  };
+}

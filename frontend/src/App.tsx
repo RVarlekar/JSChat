@@ -437,10 +437,11 @@ function formatTime(d: Date): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-function TypingIndicator() {
+function TypingIndicator({ agentName }: { agentName: string }) {
+  const shortName = agentName.split(' ')[0] || 'Nova';
   return (
     <div className="msg-group ai">
-      <div className="msg-sender-label">Nova</div>
+      <div className="msg-sender-label">{shortName}</div>
       <div className="typing-bubble">
         <div className="typing-dot" />
         <div className="typing-dot" />
@@ -450,11 +451,12 @@ function TypingIndicator() {
   );
 }
 
-function MessageBubble({ msg }: { msg: ChatMessage }) {
+function MessageBubble({ msg, agentName }: { msg: ChatMessage; agentName: string }) {
+  const shortName = agentName.split(' ')[0] || 'Nova';
   return (
     <div className={`msg-group ${msg.sender}`}>
       <div className="msg-sender-label">
-        {msg.sender === 'user' ? 'You' : 'Nova'}
+        {msg.sender === 'user' ? 'You' : shortName}
       </div>
       <div className={`bubble ${msg.sender}${msg.isError ? ' error' : ''}`}>
         {msg.text}
@@ -465,7 +467,7 @@ function MessageBubble({ msg }: { msg: ChatMessage }) {
 }
 
 export default function App() {
-  const { messages, isLoading, isLoadingHistory, send, clearSession, bottomRef } =
+  const { messages, isLoading, isLoadingHistory, send, clearSession, bottomRef, settings } =
     useChat();
   const [draft, setDraft] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -509,12 +511,12 @@ export default function App() {
         {/* Header */}
         <header className="header">
           <div className="header-left">
-            <div className="avatar">🛍️</div>
+            <div className="avatar">{settings.agentAvatar}</div>
             <div className="header-info">
-              <h1>Nova Store Support</h1>
+              <h1>{settings.agentName}</h1>
               <div className="status-row">
                 <div className="status-dot" />
-                <span>AI Agent · Online</span>
+                <span>{settings.agentStatus}</span>
               </div>
             </div>
           </div>
@@ -543,7 +545,7 @@ export default function App() {
                 products.
               </p>
               <div className="suggestions">
-                {SUGGESTIONS.map((s) => (
+                {(settings.suggestions || SUGGESTIONS).map((s) => (
                   <button
                     key={s}
                     className="suggestion-chip"
@@ -557,10 +559,10 @@ export default function App() {
           )}
 
           {messages.map((msg) => (
-            <MessageBubble key={msg.id} msg={msg} />
+            <MessageBubble key={msg.id} msg={msg} agentName={settings.agentName} />
           ))}
 
-          {isLoading && <TypingIndicator />}
+          {isLoading && <TypingIndicator agentName={settings.agentName} />}
           <div ref={bottomRef} />
         </div>
 

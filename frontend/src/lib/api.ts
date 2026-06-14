@@ -47,3 +47,37 @@ export async function fetchHistory(sessionId: string): Promise<HistoryResponse> 
 
   return data as HistoryResponse;
 }
+
+export interface StoreSettings {
+  agentName: string;
+  agentAvatar: string;
+  agentStatus: string;
+  suggestions: string[];
+  storePolicies: string;
+}
+
+export async function fetchSettings(): Promise<StoreSettings> {
+  const res = await fetch(`${BASE}/settings`);
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error ?? 'Failed to fetch settings');
+  }
+
+  return data as StoreSettings;
+}
+
+export async function updateSettings(settings: Partial<StoreSettings>): Promise<StoreSettings> {
+  const res = await fetch(`${BASE}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  const data = await res.json();
+
+  if (!res.ok) {
+    throw new Error(data.error ?? 'Failed to update settings');
+  }
+
+  return data as StoreSettings;
+}

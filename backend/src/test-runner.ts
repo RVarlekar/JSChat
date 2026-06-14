@@ -133,4 +133,79 @@ test('Integration Test Suite - AI Live Chat API', async (t) => {
     assert.ok(hitRateLimit, 'Rate limit should be triggered (status 429) after 10 requests');
     console.log('✅ Test Passed: Rate limiter correctly restricts excess queries to 10/min');
   });
+
+  // Test Settings GET and POST
+  await t.test('Settings endpoints (GET /chat/settings & POST /chat/settings) should work dynamically', async () => {
+    // 1. Get original settings
+    const resGet = await fetch(`${BASE_URL}/chat/settings`);
+    assert.strictEqual(resGet.status, 200);
+    const originalSettings = await resGet.json() as {
+      agentName: string;
+      agentAvatar: string;
+      agentStatus: string;
+      suggestions: string[];
+      storePolicies: string;
+    };
+    assert.ok(originalSettings.agentName);
+    assert.ok(originalSettings.agentAvatar);
+    assert.ok(originalSettings.agentStatus);
+    assert.ok(Array.isArray(originalSettings.suggestions));
+    assert.ok(originalSettings.storePolicies);
+
+    // 2. Update settings dynamically
+    const updatedPayload = {
+      agentName: 'Custom Agent Super',
+      agentAvatar: '🤖',
+      agentStatus: 'Active Now',
+      storePolicies: `You are a support agent for Custom Agent Super.
+      
+## Store Knowledge Base
+**Shipping Policy**
+- Standard shipping: 1 business day (free on all orders)
+`,
+      suggestions: ['Test Suggestion 1', 'Test Suggestion 2']
+    };
+
+    const resPost = await fetch(`${BASE_URL}/chat/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updatedPayload)
+    });
+    assert.strictEqual(resPost.status, 200);
+    const updatedSettings = await resPost.json() as typeof originalSettings;
+    assert.strictEqual(updatedSettings.agentName, updatedPayload.agentName);
+    assert.strictEqual(updatedSettings.agentAvatar, updatedPayload.agentAvatar);
+    assert.strictEqual(updatedSettings.agentStatus, updatedPayload.agentStatus);
+    assert.deepStrictEqual(updatedSettings.suggestions, updatedPayload.suggestions);
+    assert.strictEqual(updatedSettings.storePolicies.trim(), updatedPayload.storePolicies.trim());
+
+    // 3. Verify chat uses the updated settings (e.g. shipping policy returns standard shipping in 1 business day)
+    const resChat = await fetch(`${BASE_URL}/chat/message`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'What is your shipping policy?' })
+    });
+    assert.strictEqual(resChat.status, 200);
+    const chatBody = await resChat.json() as { reply: string };
+    const replyLower = chatBody.reply.toLowerCase();
+    assert.ok(
+      replyLower.includes('1 business day') || replyLower.includes('custom agent super') || replyLower.includes('shipping'),
+      'Reply should reference the updated policy context'
+    );
+
+    // 4. Restore original settings to clean up
+    const resRestore = await fetch(`${BASE_URL}/chat/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agentName: originalSettings.agentName,
+        agentAvatar: originalSettings.agentAvatar,
+        agentStatus: originalSettings.agentStatus,
+        storePolicies: originalSettings.storePolicies,
+        suggestions: originalSettings.suggestions
+      })
+    });
+    assert.strictEqual(resRestore.status, 200);
+    console.log('✅ Test Passed: Dynamic settings update and chat context integration works perfectly');
+  });
 });

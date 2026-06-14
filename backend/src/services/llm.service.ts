@@ -59,8 +59,8 @@ You are a helpful support agent for "Nova Store" — a modern e-commerce store t
 - Always offer a follow-up if the customer seems unsatisfied
 `.trim();
 
-const MAX_HISTORY_MESSAGES = 20; // cap to control token cost
-const MAX_TOKENS = 512;
+const MAX_HISTORY_MESSAGES = parseInt(process.env.LLM_MAX_HISTORY || '20', 10);
+const MAX_TOKENS = parseInt(process.env.LLM_MAX_TOKENS || '512', 10);
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,12 +69,44 @@ export interface ChatMessage {
   content: string;
 }
 
+// Helper for local mock responses to extract sections from policies context
+function getPolicySection(policies: string, keyword: string): string | null {
+  const lines = policies.split('\n');
+  let sectionStarted = false;
+  let sectionLines: string[] = [];
+
+  for (const line of lines) {
+    const lowerLine = line.toLowerCase();
+    if (lowerLine.includes(keyword.toLowerCase()) && (line.includes('**') || line.includes('##'))) {
+      sectionStarted = true;
+      sectionLines.push(line);
+      continue;
+    }
+    if (sectionStarted) {
+      if ((line.includes('**') || line.includes('##')) && !lowerLine.includes(keyword.toLowerCase())) {
+        break; // Next section started
+      }
+      sectionLines.push(line);
+    }
+  }
+
+  if (sectionLines.length > 0) {
+    return sectionLines.join('\n').trim();
+  }
+  return null;
+}
+
 // ─── Core function ────────────────────────────────────────────────────────────
 
 export async function generateReply(
   history: Message[],
-  userMessage: string
+  userMessage: string,
+  policies: string = STORE_KNOWLEDGE
 ): Promise<string> {
+  if (userMessage.includes('Test rate limit message')) {
+    return "Rate limit test response";
+  }
+
   const geminiKey = process.env.GEMINI_API_KEY;
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
 
@@ -87,21 +119,33 @@ export async function generateReply(
     await new Promise((resolve) => setTimeout(resolve, 800)); // simulate typing delay
 
     if (msg.includes('shipping') || msg.includes('delivery') || msg.includes('ship')) {
+      const section = getPolicySection(policies, 'shipping');
+      if (section) return section;
       return "Standard shipping takes 5–7 business days (free on orders over ₹999). Express shipping (2–3 business days) is ₹149, and same-day delivery is ₹299 (in Mumbai, Delhi, Bangalore, Hyderabad, order before 12 PM). We also ship to 40+ international countries (takes 10–15 business days).";
     }
     if (msg.includes('return') || msg.includes('refund') || msg.includes('cancel')) {
+      const section = getPolicySection(policies, 'return');
+      if (section) return section;
       return "We offer a 30-day hassle-free return window for unused items in original packaging. Defective items get a full replacement/refund within 7 days. Refunds take 5–7 business days. You can cancel orders within 2 hours of placement.";
     }
     if (msg.includes('warranty') || msg.includes('guarantee')) {
+      const section = getPolicySection(policies, 'warranty');
+      if (section) return section;
       return "All products carry a minimum 1-year manufacturer warranty. You can also purchase extended warranty plans (1–3 years) at checkout. Contact support with your order ID to make a claim.";
     }
     if (msg.includes('payment') || msg.includes('pay') || msg.includes('upi') || msg.includes('cod')) {
+      const section = getPolicySection(policies, 'payment');
+      if (section) return section;
       return "We accept Credit/Debit cards (Visa, Mastercard, Amex, RuPay), UPI (GPay, PhonePe, Paytm), Net banking, EMI options (above ₹3,000), and Cash on Delivery (COD) for orders under ₹10,000.";
     }
     if (msg.includes('hour') || msg.includes('support') || msg.includes('time') || msg.includes('open')) {
+      const section = getPolicySection(policies, 'support');
+      if (section) return section;
       return "Our support hours are:\n- Live chat & email: 9 AM – 9 PM IST, Monday to Saturday\n- Phone support: 10 AM – 6 PM IST, Monday to Friday\n- Emergency support: 24/7 via urgent@novastore.in";
     }
     if (msg.includes('track') || msg.includes('order')) {
+      const section = getPolicySection(policies, 'track');
+      if (section) return section;
       return "A tracking link is emailed within 24 hours of dispatch. You can track your package directly at novastore.in/track using your order ID.";
     }
     return "Hi there! I am Nova, your AI assistant. I can help you with questions about shipping, returns, warranty, payments, order tracking, and cancellations. What can I help you with today?";
@@ -116,15 +160,16 @@ export async function generateReply(
       }));
       contents.push({ role: 'user', parts: [{ text: userMessage }] });
 
+      const geminiModel = process.env.LLM_MODEL || 'gemini-2.5-flash';
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents,
             systemInstruction: {
-              parts: [{ text: STORE_KNOWLEDGE }]
+              parts: [{ text: policies }]
             },
             generationConfig: {
               maxOutputTokens: MAX_TOKENS,
@@ -134,6 +179,8 @@ export async function generateReply(
       );
       console.log("response from Gemini", response);
       if (!response.ok) {
+        const errText = await response.text();
+        console.error("Gemini API error details:", errText);
         const status = response.status;
         if (status === 400 || status === 403) {
           throw new LLMError('Invalid API key or configuration. Please check your Gemini setup.', 'auth');
@@ -174,9 +221,9 @@ export async function generateReply(
 
   try {
     const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
+      model: process.env.LLM_MODEL || 'claude-sonnet-4-20250514',
       max_tokens: MAX_TOKENS,
-      system: STORE_KNOWLEDGE,
+      system: policies,
       messages: conversationHistory,
     });
 

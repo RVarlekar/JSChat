@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { sendMessage, fetchHistory, type HistoryMessage } from '../lib/api';
+import { sendMessage, fetchHistory, fetchSettings, type HistoryMessage, type StoreSettings } from '../lib/api';
 
 export interface ChatMessage {
   id: string;
@@ -18,7 +18,30 @@ export function useChat() {
   );
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [settings, setSettings] = useState<StoreSettings>({
+    agentName: 'Nova Store Support',
+    agentAvatar: '🛍️',
+    agentStatus: 'AI Agent · Online',
+    suggestions: [
+      "What's your return policy?",
+      'Do you ship internationally?',
+      'What payment methods do you accept?',
+      'How do I track my order?',
+    ],
+    storePolicies: '',
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Load store settings on mount
+  useEffect(() => {
+    fetchSettings()
+      .then((res) => {
+        setSettings(res);
+      })
+      .catch((err) => {
+        console.warn('Failed to load store settings, using fallback defaults', err);
+      });
+  }, []);
 
   // Load history on mount if session exists
   useEffect(() => {
@@ -105,5 +128,5 @@ export function useChat() {
     setMessages([]);
   }, []);
 
-  return { messages, isLoading, isLoadingHistory, send, clearSession, bottomRef };
+  return { messages, isLoading, isLoadingHistory, send, clearSession, bottomRef, settings };
 }

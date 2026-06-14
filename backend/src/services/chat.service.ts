@@ -7,6 +7,7 @@ import {
 } from '../db/queries';
 import { generateReply, LLMError } from './llm.service';
 import { getCache, setCache, invalidateCache } from './cache.service';
+import { getStoreSettingsCached } from './settings.service';
 
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -66,7 +67,8 @@ export async function sendMessage(
   // Call LLM
   let replyText: string;
   try {
-    replyText = await generateReply(history, text);
+    const settings = await getStoreSettingsCached();
+    replyText = await generateReply(history, text, settings.store_policies);
   } catch (err) {
     if (err instanceof LLMError) {
       // Still persist a friendly AI error message so UI shows something
