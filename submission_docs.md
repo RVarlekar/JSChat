@@ -164,6 +164,7 @@ The backend follows a layered architecture pattern:
 - **Short History Window**: Appends up to the last **20 messages** of conversation history (`MAX_HISTORY_MESSAGES = 20`) to Anthropic messages to preserve conversational context without exceeding token quotas.
 - **Token Caps**: Restricts replies to `max_tokens: 512` to control query costs.
 - **Graceful Error Classification**: Anthropic API errors are caught and converted into user-friendly notifications (e.g., `401` -> *"Invalid API key. Please contact support."*, `429` -> *"Our AI agent is very busy right now..."*).
+- **Environment & Key Security**: All credentials (`.env`) are strictly local and ignored by Git. The `.env.example` file has been completely deleted from the repository to prevent accidental credential leaks.
 
 ---
 

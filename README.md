@@ -41,12 +41,7 @@ npm run install:all
 
 ### 2. Configure Environment Variables
 
-```bash
-cd backend
-cp .env.example .env
-```
-
-Edit `backend/.env`:
+Create `backend/.env` manually with the following variables:
 
 ```env
 ANTHROPIC_API_KEY=sk-ant-...        # Your Anthropic API key (optional)
@@ -57,7 +52,7 @@ NODE_ENV=development
 FRONTEND_URL=http://localhost:5173
 ```
 
-> **Never commit your `.env` file.** It is in `.gitignore`.
+> **Never commit your `.env` file.** It is ignored by Git. The `.env.example` template has been deleted from the repository for security to prevent credentials leaks.
 
 ---
 
